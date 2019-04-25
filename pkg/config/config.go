@@ -17,6 +17,7 @@ type Config struct {
 type Provider struct {
 	Name              string `yaml:"name"`
 	ApiKey            string `yaml:"apiKey"`
+	AppKey            string `yaml:"appKey"`
 	ApiURL            string `yaml:"apiURL"`
 	AlertContacts     string `yaml:"alertContacts"`
 	AlertIntegrations string `yaml:"alertIntegrations"`

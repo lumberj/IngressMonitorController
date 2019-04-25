@@ -18,3 +18,5 @@ import:
   version: v0.3
 - package: github.com/stretchr/testify/assert
   version: v1.3.0
+- package: github.com/zorkian/go-datadog-api
+  version: v2.20.0
