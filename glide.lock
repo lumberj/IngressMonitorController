@@ -1,8 +1,10 @@
-hash: f9d8ce569a578efaabb8a00f774f6a9bc9be748ad73d143762075298d78d0a93
-updated: 2019-04-15T11:09:48.694405365Z
+hash: 2622d0ad25939c9a968da58f7da8765b3da37ac8f8ab09b9acae8f6f632975af
+updated: 2019-04-29T17:57:49.051434-07:00
 imports:
 - name: github.com/antoineaugusti/updown
   version: 9f067e15937f51321c400ad87f9d30f21a175481
+- name: github.com/cenkalti/backoff
+  version: 1e4cf3da559842a91afcb6ea6141451e6c30c618
 - name: github.com/davecgh/go-spew
   version: 782f4967f2dc4564575ca782fe2d04090b5faca8
   subpackages:
@@ -99,6 +101,8 @@ imports:
   version: ffdc059bfe9ce6a4e144ba849dbedead332c6053
   subpackages:
   - assert
+- name: github.com/zorkian/go-datadog-api
+  version: 06846f29cfb523ecd18d7b23898a6a4e1faf8157
 - name: golang.org/x/crypto
   version: 81e90905daefcd6fd217b62423c0908922eadb30
   subpackages:
