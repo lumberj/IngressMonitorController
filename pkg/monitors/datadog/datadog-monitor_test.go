@@ -38,7 +38,7 @@ func TestAddDatadogMonitorWithResponseType(t *testing.T) {
 	annotations := make(map[string]string)
 	// annotations["datadog.monitor.stakater.com/locations"] = "US-Central"
 
-	m := models.Monitor{Name: "Test on google.com", URL: "https://google.com", Annotations: annotations}
+	m := models.Monitor{Name: "google-test", URL: "https://google.com", Annotations: annotations}
 	service := makeService()
 	service.Add(m)
 
@@ -53,5 +53,5 @@ func TestAddDatadogMonitorWithResponseType(t *testing.T) {
 	if mRes.URL != m.URL {
 		t.Error("The URL is incorrect, expected: " + m.URL + ", but was: " + mRes.URL)
 	}
-	// service.Remove(*mRes)
+	service.Remove(*mRes)
 }

@@ -83,6 +83,7 @@ func monitorToSyntheticsTest(m models.Monitor) (*datadog.SyntheticsTest, error) 
 		locations    = []string{monitorLocationsDefault}
 		tickEvery    = monitorRequestPeriodDefault
 		testType     = monitorType
+		tags         = []string{}
 	)
 
 	synRequest := datadog.SyntheticsRequest{
@@ -114,6 +115,7 @@ func monitorToSyntheticsTest(m models.Monitor) (*datadog.SyntheticsTest, error) 
 		Locations: locations,
 		Options:   &options,
 		Type:      &testType,
+		Tags:      tags,
 	}
 	wrapped := newWrappedDatadogSyntheticsTest(&synTest)
 	wrapped.SetOptionsFromAnnotations(m.Annotations)

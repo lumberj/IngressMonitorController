@@ -15,7 +15,7 @@ const (
 	// "aws:ca-central-1", "aws:eu-west-2", "aws:ap-northeast-1",
 	// "aws:us-west-2", "aws:ap-southeast-2"
 	monitorLocationsAnnotation = "datadog.monitor.stakater.com/locations"
-	monitorLocationsDefault    = "aws:us-east-1"
+	monitorLocationsDefault    = "aws:us-east-2"
 
 	// Possible types are header, body, responseTime, and statusCode
 	monitorResponseTypeAnnotation = "datadog.monitor.stakater.com/response-type"
