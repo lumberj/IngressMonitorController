@@ -3,6 +3,7 @@ package datadog
 import (
 	"fmt"
 	"log"
+	"strconv"
 
 	"github.com/stakater/IngressMonitorController/pkg/config"
 	"github.com/stakater/IngressMonitorController/pkg/models"
@@ -28,13 +29,13 @@ func DatadogMonitorToBaseMonitorMapper(datadogMonitor *datadog.SyntheticsTest) *
 	return monitor
 }
 
-func DatadogMonitorToBaseMonitorMappers(datadogMonitors *[]datadog.SyntheticsTest) *[]models.Monitor {
+func DatadogMonitorsToBaseMonitorMappers(datadogMonitors *[]datadog.SyntheticsTest) []models.Monitor {
 	monitors := make([]models.Monitor, len(*datadogMonitors))
 	for i, synTest := range *datadogMonitors {
 		newMon := DatadogMonitorToBaseMonitorMapper(&synTest)
 		monitors[i] = *newMon
 	}
-	return &monitors
+	return monitors
 }
 
 // Setup DataDog Synthetics MonitorService
@@ -66,18 +67,7 @@ func (service *DatadogMonitorService) GetAll() []models.Monitor {
 		log.Println("Error received while listing Synthetics Tests: ", err.Error())
 		return nil
 	}
-
-	monitors := make([]models.Monitor, len(syntheticsTests))
-
-	for i, synTest := range syntheticsTests {
-		newMon := models.Monitor{
-			ID:   *synTest.PublicId,
-			Name: *synTest.Name,
-			URL:  *synTest.Config.Request.Url,
-		}
-		monitors[i] = newMon
-	}
-	return monitors
+	return DatadogMonitorsToBaseMonitorMappers(&syntheticsTests)
 }
 
 func monitorToSyntheticsTest(m models.Monitor) (*datadog.SyntheticsTest, error) {
@@ -88,7 +78,7 @@ func monitorToSyntheticsTest(m models.Monitor) (*datadog.SyntheticsTest, error) 
 		message      = m.Name
 		method       = monitorRequestMethodDefault
 		responseType = monitorResponseTypeDefault
-		target       = monitorResponseStatusCodeDefault
+		target, _    = strconv.Atoi(monitorResponseStatusCodeDefault)
 		operator     = "is"
 		locations    = []string{monitorLocationsDefault}
 		tickEvery    = monitorRequestPeriodDefault

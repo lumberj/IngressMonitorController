@@ -51,7 +51,7 @@ const (
 
 	// Current possible values are 60, 300, 900, 1800, 3600, 21600, 43200, 86400, 604800
 	monitorRequestPeriodAnnotation = "datadog.monitor.stakater.com/request-period"
-	monitorRequestPeriodDefault    = 300
+	monitorRequestPeriodDefault    = 60
 
 	monitorRequestMinFailureDurationAnnotation = "datadog.monitor.stakater.com/request-min-failure-duration"
 	monitorRequestMinFailureDurationDefault    = 0
