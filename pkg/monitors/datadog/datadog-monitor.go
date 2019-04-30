@@ -2,22 +2,43 @@ package datadog
 
 import (
 	"fmt"
+	"log"
+
 	"github.com/stakater/IngressMonitorController/pkg/config"
 	"github.com/stakater/IngressMonitorController/pkg/models"
 	"github.com/zorkian/go-datadog-api"
-	"log"
 )
 
-// MonitorService for Datadog Synthetics
-type MonitorService struct {
+// DatadogMonitorService for Datadog Synthetics
+type DatadogMonitorService struct {
 	apiKey string
 	appKey string
 	url    string
 	client *datadog.Client
 }
 
+func DatadogMonitorToBaseMonitorMapper(datadogMonitor *datadog.SyntheticsTest) *models.Monitor {
+	monitor := &models.Monitor{
+		ID:   *datadogMonitor.PublicId,
+		Name: *datadogMonitor.Name,
+		URL:  *datadogMonitor.Config.Request.Url,
+	}
+	// TODO
+	// setAnnotations(monitor, datadogMonitor)
+	return monitor
+}
+
+func DatadogMonitorToBaseMonitorMappers(datadogMonitors *[]datadog.SyntheticsTest) *[]models.Monitor {
+	monitors := make([]models.Monitor, len(*datadogMonitors))
+	for i, synTest := range *datadogMonitors {
+		newMon := DatadogMonitorToBaseMonitorMapper(&synTest)
+		monitors[i] = *newMon
+	}
+	return &monitors
+}
+
 // Setup DataDog Synthetics MonitorService
-func (service *MonitorService) Setup(p config.Provider) {
+func (service *DatadogMonitorService) Setup(p config.Provider) {
 	service.apiKey = p.ApiKey
 	service.appKey = p.AppKey
 	service.url = p.ApiURL
@@ -31,14 +52,14 @@ func (service *MonitorService) Setup(p config.Provider) {
 	// TODO: Validate Connection
 	// _, err := service.client.Validate()
 	// if err != nil {
-	// 	log.Println("Error initializing monitor: ", err.Error())
+	// 	log.Println("Error initializing Datadog monitor: ", err.Error())
 	// 	return
 	// }
 
 }
 
 // GetAll retrieve all Datadog Synthetic Test Monitors
-func (service *MonitorService) GetAll() []models.Monitor {
+func (service *DatadogMonitorService) GetAll() []models.Monitor {
 	syntheticsTests, err := service.client.GetSyntheticsTests()
 
 	if err != nil {
@@ -59,21 +80,26 @@ func (service *MonitorService) GetAll() []models.Monitor {
 	return monitors
 }
 
-// Add new Monitor to Datadog Synthetics Tests
-func (service *MonitorService) Add(m models.Monitor) {
+func monitorToSyntheticsTest(m models.Monitor) (*datadog.SyntheticsTest, error) {
+	// Defaults
 	var (
-		method       = "GET"
-		responseType = "statusCode"
-		target       = 200
+		url          = m.URL
+		name         = m.Name
+		message      = m.Name
+		method       = monitorRequestMethodDefault
+		responseType = monitorResponseTypeDefault
+		target       = monitorResponseStatusCodeDefault
 		operator     = "is"
-		locations    = []string{"aws:us-east-1"}
-		tickEvery    = 60 // seconds
-		testType     = "api"
+		locations    = []string{monitorLocationsDefault}
+		tickEvery    = monitorRequestPeriodDefault
+		testType     = monitorType
 	)
+
 	synRequest := datadog.SyntheticsRequest{
-		Url:    &m.URL,
+		Url:    &url,
 		Method: &method,
 	}
+
 	assertions := []datadog.SyntheticsAssertion{
 		datadog.SyntheticsAssertion{
 			Operator: &operator,
@@ -81,40 +107,58 @@ func (service *MonitorService) Add(m models.Monitor) {
 			Target:   &target,
 		},
 	}
+
 	config := datadog.SyntheticsConfig{
 		Request:    &synRequest,
 		Assertions: assertions,
 	}
+
 	options := datadog.SyntheticsOptions{
 		TickEvery: &tickEvery,
 	}
+
 	synTest := datadog.SyntheticsTest{
+		Name:      &name,
+		Message:   &message,
 		Config:    &config,
 		Locations: locations,
 		Options:   &options,
 		Type:      &testType,
 	}
+	wrapped := newWrappedDatadogSyntheticsTest(&synTest)
+	wrapped.SetOptionsFromAnnotations(m.Annotations)
+	if !wrapped.IsValid {
+		return nil, fmt.Errorf("Error creating monitor: %v"+m.Name, wrapped.Errors)
+	}
 
-	if _, err := service.client.CreateSyntheticsTest(&synTest); err != nil {
-		log.Println("Error received creating Synthetics Tests: ", err.Error())
+	return &synTest, nil
+}
+
+// Add new Monitor to Datadog Synthetics Tests
+func (service *DatadogMonitorService) Add(m models.Monitor) {
+	synTest, err := monitorToSyntheticsTest(m)
+	if err != nil {
+		log.Println("Error creating monitor: "+m.Name, err.Error())
+		return
+	}
+
+	if _, err := service.client.CreateSyntheticsTest(synTest); err != nil {
+		log.Println("Error received creating Synthetics Test for Monitor: "+m.Name, err.Error())
 		return
 	}
 	log.Println("Monitor Added: " + m.Name)
 }
 
 // Update Datadog Synthetics Tests Monitor
-func (service *MonitorService) Update(m models.Monitor) {
-	synTest, err := service.client.GetSyntheticsTest(m.ID)
-	if err != nil {
-		log.Println("Error getting monitor: "+m.Name, err.Error())
+func (service *DatadogMonitorService) Update(m models.Monitor) {
+	newSyntest, _ := monitorToSyntheticsTest(m)
+	if _, err := service.client.UpdateSyntheticsTest(m.ID, newSyntest); err != nil {
+		log.Println("Error updating monitor: "+m.Name, err.Error())
 	}
-	// TODO: Allow updating other options based on Annotations
-	synTest.Name = &m.Name
-	synTest.Config.Request.Url = &m.URL
 }
 
 // GetByName returns Datadog Synthetics Test Monitor by Name
-func (service *MonitorService) GetByName(n string) (*models.Monitor, error) {
+func (service *DatadogMonitorService) GetByName(n string) (*models.Monitor, error) {
 	var monitor *models.Monitor
 	syntheticsTests, err := service.client.GetSyntheticsTests()
 	if err != nil {
@@ -123,11 +167,7 @@ func (service *MonitorService) GetByName(n string) (*models.Monitor, error) {
 	}
 	for _, synTest := range syntheticsTests {
 		if *synTest.Name == n {
-			monitor = &models.Monitor{
-				ID:   *synTest.PublicId,
-				Name: *synTest.Name,
-				URL:  *synTest.Config.Request.Url,
-			}
+			monitor = DatadogMonitorToBaseMonitorMapper(&synTest)
 			return monitor, nil
 		}
 	}
@@ -138,7 +178,7 @@ func (service *MonitorService) GetByName(n string) (*models.Monitor, error) {
 }
 
 // Remove a Datadog Synthetics Test Monitor
-func (service *MonitorService) Remove(m models.Monitor) {
+func (service *DatadogMonitorService) Remove(m models.Monitor) {
 	err := service.client.DeleteSyntheticsTests([]string{m.ID})
 	if err != nil {
 		log.Println("Error deleting monitor: ", m.Name, err.Error())

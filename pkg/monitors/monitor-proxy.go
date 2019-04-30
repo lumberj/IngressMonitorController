@@ -32,7 +32,7 @@ func (mp *MonitorServiceProxy) OfType(mType string) MonitorServiceProxy {
 	case "Updown":
 		mp.monitor = &updown.UpdownMonitorService{}
 	case "Datadog":
-		mp.monitor = &datadog.MonitorService{}
+		mp.monitor = &datadog.DatadogMonitorService{}
 	default:
 		log.Panic("No such provider found: ", mType)
 	}
